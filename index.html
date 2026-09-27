@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pigmail - 私人加密信箱</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .hidden { display: none !important; }
+        input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .mail-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .mail-item:hover { background: #f8f9fa; }
+        .header-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 登入區塊 -->
+    <div id="login-section">
+        <h2>Pigmail 登入</h2>
+        <p>請輸入您的專屬帳號與密碼</p>
+        <input type="text" id="username" placeholder="帳號 (例如: ffff)">
+        <input type="password" id="password" placeholder="密碼">
+        <button onclick="login()">登入</button>
+        <p id="login-error" style="color: red;"></p>
+    </div>
+
+    <!-- 收件匣區塊 -->
+    <div id="inbox-section" class="hidden">
+        <div class="header-info">
+            <div>
+              <h3 id="user-display" style="margin: 0;"></h3>
+              <small id="email-display" style="color: #666;"></small>
+            </div>
+            <button onclick="logout()" style="width: auto; padding: 6px 12px; background: #dc3545;">登出</button>
+        </div>
+        
+        <h4>收件匣</h4>
+        <div id="mail-list">
+            <p style="color: #888;">目前沒有新郵件</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const BIN_ID = '6aa1715dac6210605ab87b62';
+    const API_KEY = '$2a$10$Q3e6T7l53HKgJr3pc5tuW.5dTGTAyi6948TrSpoe7mNIZm6kaRMbm';
+
+    async function login() {
+        const u = document.getElementById('username').value.trim();
+        const p = document.getElementById('password').value.trim();
+        const errTag = document.getElementById('login-error');
+
+        if (!u || !p) {
+            errTag.innerText = '請輸入帳號與密碼';
+            return;
+        }
+
+        try {
+            // 從前端直接讀取 JSONBin 驗證帳號
+            const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+                headers: { 'X-Master-Key': API_KEY }
+            });
+            const data = await res.json();
+            const users = data.record;
+
+            const userFound = users.find(user => user.username === u && user.password === p);
+
+            if (userFound) {
+                localStorage.setItem('pigmail_user', u);
+                showInbox(u);
+            } else {
+                errTag.innerText = '帳號或密碼錯誤';
+            }
+        } catch (e) {
+            errTag.innerText = '連線驗證失敗';
+        }
+    }
+
+    function showInbox(username) {
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('inbox-section').classList.remove('hidden');
+        document.getElementById('user-display').innerText = `使用者: ${username}`;
+        document.getElementById('email-display').innerText = `${username}@pigmail.pig365.work.gd`;
+        
+        // 載入該使用者的郵件列表 (此處可對接你的後端 API 取得該帳號收到的信)
+        loadMails(username);
+    }
+
+    function logout() {
+        localStorage.removeItem('pigmail_user');
+        location.reload();
+    }
+
+    async function loadMails(username) {
+        // 範例：向你的後端請求該使用者的信件
+        // const res = await fetch(`/api/mails?username=${username}`);
+        // const mails = await res.json();
+    }
+
+    // 自動檢查是否登入過
+    window.onload = function() {
+        const savedUser = localStorage.getItem('pigmail_user');
+        if (savedUser) {
+            showInbox(savedUser);
+        }
+    }
+</script>
+
+</body>
+</html>
